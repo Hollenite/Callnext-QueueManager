@@ -1,26 +1,152 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --porcelain: #f4f6f8;
+  --ink: #12263a;
+  --ticket: #c81e1e;
+  --amber: #e8a317;
+  --slate: #5a6b7d;
+  --line: #d5dce3;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-porcelain: var(--porcelain);
+  --color-ink: var(--ink);
+  --color-ticket: var(--ticket);
+  --color-amber: var(--amber);
+  --color-slate: var(--slate);
+  --color-line: var(--line);
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-display: Syne, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--porcelain);
+  color: var(--ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "IBM Plex Sans", sans-serif;
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+.display {
+  font-family: Syne, sans-serif;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 120ms var(--ease-out);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--porcelain);
+}
+
+.btn-ticket {
+  background: var(--ticket);
+  color: #fff;
+}
+
+.btn-amber {
+  background: var(--amber);
+  color: var(--ink);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.btn-quiet {
+  background: transparent;
+  color: var(--slate);
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+}
+
+.field {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 0.9rem;
+  border: 0;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font: inherit;
+}
+
+.ticket-number {
+  font-family: Syne, sans-serif;
+  font-weight: 800;
+  font-size: clamp(6.5rem, 28vw, 12rem);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: var(--ticket);
+  font-variant-numeric: tabular-nums;
+  animation: ticket-tick 180ms var(--ease-out);
+}
+
+@keyframes ticket-tick {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.ticket-number.is-now {
+  color: var(--amber);
+  font-size: clamp(5rem, 22vw, 9rem);
+}
+
+.clipboard-row {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .ticket-number {
+    transition: none;
+    animation: none;
+  }
 }
