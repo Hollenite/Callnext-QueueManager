@@ -1,8 +1,10 @@
 "use client";
 
+import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { cn } from "@/lib/cn";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import { getTicket, saveTicket, type StoredTicket } from "@/lib/ticket-token";
@@ -141,6 +143,7 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
 
   async function leave() {
     if (!ticket?.entryId || !ticket.token) return;
+    if (!window.confirm("Leave the queue?")) return;
     setLeaving(true);
     setError(null);
     const { error: rpcError } = await createClient().rpc("leave_queue", {
@@ -198,38 +201,45 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
   }
 
   const serving = myStatus === "serving";
+  const headline = serving
+    ? "You're in"
+    : position === 1
+      ? "You're next"
+      : "Your place";
 
   return (
     <div className="flex min-h-[80dvh] flex-col">
       <p className="text-slate">{queue.name}</p>
       <div className="mt-10 flex flex-1 flex-col items-start">
-        {serving ? (
-          <p key="now" className="ticket-number is-now">
-            now
+        <div className="ticket-stub w-full">
+          <p
+            key={serving ? "now" : String(position ?? "wait")}
+            className={cn("ticket-number", serving && "is-now")}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {serving ? "now" : (position ?? "—")}
           </p>
-        ) : (
-          <p key={position ?? "wait"} className="ticket-number">
-            {position ?? "—"}
-          </p>
-        )}
-        <h1 className="mt-8 text-3xl tracking-tight">
-          {serving
-            ? "You're in"
-            : position === 1
-              ? "You're next"
-              : "Your place"}
+        </div>
+        <h1
+          className="mt-8 text-3xl tracking-tight"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {headline}
         </h1>
-        {!serving && waitLabel && position !== 1 ? (
-          <p className="mt-3 text-xl text-slate">{waitLabel}</p>
-        ) : null}
-        {!serving && position === 1 && ahead !== null && ahead > 0 && waitLabel ? (
+        {!serving && waitLabel ? (
           <p className="mt-3 text-xl text-slate">{waitLabel}</p>
         ) : null}
         {!queue.is_open ? (
           <p className="mt-4 text-slate">This queue is closed to new joins.</p>
         ) : null}
       </div>
-      {error ? <p className="text-ticket">{error}</p> : null}
+      {error ? (
+        <p className="text-ticket" role="alert">
+          {error}
+        </p>
+      ) : null}
       {!serving ? (
         <button
           className="btn btn-ghost mt-8 w-fit"
@@ -237,6 +247,7 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           disabled={leaving}
           onClick={() => void leave()}
         >
+          <LogOut className="size-4" aria-hidden="true" />
           {leaving ? "Leaving…" : "Leave the queue"}
         </button>
       ) : null}

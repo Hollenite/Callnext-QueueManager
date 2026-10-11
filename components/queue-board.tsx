@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { JoinQr } from "@/components/join-qr";
+import { toast } from "@/components/toaster";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import { minutesAgo } from "@/lib/time";
@@ -17,7 +18,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
   const [queue, setQueue] = useState(initialQueue);
   const [entries, setEntries] = useState(initialEntries);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
 
   const serving = useMemo(
     () => entries.filter((entry) => entry.status === "serving"),
@@ -88,40 +89,50 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQueue.id]);
 
-  function run(label: string, fn: () => Promise<void>) {
+  function run(label: string, fn: () => Promise<void>, successToast?: string) {
     setError(null);
-    startTransition(() => {
-      void (async () => {
-        try {
-          await fn();
-          await refresh();
-        } catch (caught) {
-          setError(
-            caught instanceof Error ? caught.message : `Could not ${label}.`,
-          );
-        }
-      })();
-    });
+    setPending(true);
+    void (async () => {
+      try {
+        await fn();
+        await refresh();
+        if (successToast) toast(successToast);
+      } catch (caught) {
+        setError(
+          caught instanceof Error ? caught.message : `Could not ${label}.`,
+        );
+      } finally {
+        setPending(false);
+      }
+    })();
   }
 
   function callNext() {
-    run("call next", async () => {
-      const { data, error: rpcError } = await createClient().rpc("call_next", {
-        queue_id: queue.id,
-      });
-      if (rpcError) throw new Error(rpcErrorMessage(rpcError));
-      if (!data) throw new Error("Nobody is waiting.");
-    });
+    run(
+      "call next",
+      async () => {
+        const { data, error: rpcError } = await createClient().rpc("call_next", {
+          queue_id: queue.id,
+        });
+        if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+        if (!data) throw new Error("Nobody is waiting.");
+      },
+      "Call next",
+    );
   }
 
   function finish(entryId: string, outcome: "done" | "no_show") {
-    run(outcome, async () => {
-      const { error: rpcError } = await createClient().rpc("finish_entry", {
-        entry_id: entryId,
-        outcome,
-      });
-      if (rpcError) throw new Error(rpcErrorMessage(rpcError));
-    });
+    run(
+      outcome,
+      async () => {
+        const { error: rpcError } = await createClient().rpc("finish_entry", {
+          entry_id: entryId,
+          outcome,
+        });
+        if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+      },
+      outcome === "done" ? "Done" : "No-show",
+    );
   }
 
   function toggleOpen() {
@@ -136,73 +147,96 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
 
   return (
     <div className="mt-4">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
         <div>
           <h1 className="text-4xl tracking-tight">{queue.name}</h1>
-          <p className="mt-1 text-slate">
-            {queue.is_open ? "Open for joins" : "Closed"}
+          <p className="mt-2 text-slate">
+            {queue.is_open ? "Open" : "Closed"}
+            <span aria-hidden="true"> · </span>
+            <span className="display text-xl text-ticket">{waiting.length}</span>
+            {" "}
+            waiting
           </p>
         </div>
-        <button className="btn btn-ghost" type="button" onClick={toggleOpen} disabled={pending}>
+        <button
+          className="btn btn-ghost"
+          type="button"
+          onClick={toggleOpen}
+          disabled={pending}
+        >
           {queue.is_open ? "Close" : "Open"}
         </button>
       </header>
 
-      <JoinQr queueId={queue.id} />
+      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
+        <div>
+          <button
+            className="btn btn-primary min-h-16 w-full text-xl"
+            type="button"
+            onClick={callNext}
+            disabled={pending || waiting.length === 0}
+            aria-busy={pending}
+          >
+            Call next
+          </button>
+          {error ? (
+            <p className="mt-3 text-ticket" role="alert">
+              {error}
+            </p>
+          ) : null}
 
-      <button
-        className="btn btn-primary mt-10 min-h-16 w-full text-xl"
-        type="button"
-        onClick={callNext}
-        disabled={pending || waiting.length === 0}
-      >
-        Call next
-      </button>
-      {error ? <p className="mt-3 text-ticket">{error}</p> : null}
+          {serving.length === 0 && waiting.length === 0 ? (
+            <p className="mt-10 text-lg text-slate">
+              Nobody is waiting. Share the QR.
+            </p>
+          ) : null}
 
-      {serving.length === 0 && waiting.length === 0 ? (
-        <p className="mt-10 text-lg text-slate">
-          Nobody is waiting. Share the QR.
-        </p>
-      ) : null}
-
-      {serving.map((entry) => (
-        <section
-          key={entry.id}
-          className="mt-10 border-t-2 border-amber pt-4"
-        >
-          <p className="text-amber">Now serving</p>
-          <p className="display mt-1 text-3xl">{entry.display_name}</p>
-          <div className="mt-4 flex gap-3">
-            <button
-              className="btn btn-amber"
-              type="button"
-              disabled={pending}
-              onClick={() => finish(entry.id, "done")}
+          {serving.map((entry) => (
+            <section
+              key={entry.id}
+              className="mt-10 border-t-2 border-amber pt-4"
             >
-              Done
-            </button>
-            <button
-              className="btn btn-ghost"
-              type="button"
-              disabled={pending}
-              onClick={() => finish(entry.id, "no_show")}
-            >
-              No-show
-            </button>
-          </div>
-        </section>
-      ))}
+              <p className="text-amber">Now serving</p>
+              <p className="display mt-1 text-3xl">{entry.display_name}</p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  className="btn btn-amber"
+                  type="button"
+                  disabled={pending}
+                  onClick={() => finish(entry.id, "done")}
+                >
+                  Done
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  disabled={pending}
+                  onClick={() => finish(entry.id, "no_show")}
+                >
+                  No-show
+                </button>
+              </div>
+            </section>
+          ))}
 
-      <ol className="mt-8">
-        {waiting.map((entry, index) => (
-          <li key={entry.id} className="clipboard-row">
-            <span className="display text-xl text-ticket">{index + 1}</span>
-            <span className="text-lg">{entry.display_name}</span>
-            <span className="text-slate">{minutesAgo(entry.joined_at)}</span>
-          </li>
-        ))}
-      </ol>
+          {waiting.length > 0 ? (
+            <ol className="mt-8">
+              {waiting.map((entry, index) => (
+                <li key={entry.id} className="clipboard-row">
+                  <span className="display text-xl text-ticket">{index + 1}</span>
+                  <span className="text-lg">{entry.display_name}</span>
+                  <span className="text-slate">{minutesAgo(entry.joined_at)}</span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
+
+        <aside className="qr-stub lg:sticky lg:top-6">
+          <p className="mb-3 text-sm text-slate">Customers scan this</p>
+          <JoinQr queueId={queue.id} />
+        </aside>
+      </div>
     </div>
   );
 }

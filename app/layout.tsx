@@ -1,10 +1,14 @@
 /* eslint-disable @next/next/no-page-custom-font */
 import type { Metadata, Viewport } from "next";
 import { RegisterSw } from "@/components/register-sw";
+import { Toaster } from "@/components/toaster";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Queue",
+  title: {
+    default: "Queue",
+    template: "%s · Queue",
+  },
   description:
     "A live queue for a clinic or salon. Customers join by QR and watch their place update.",
   appleWebApp: {
@@ -40,8 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col">
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         {children}
         <RegisterSw />
+        <Toaster />
       </body>
     </html>
   );

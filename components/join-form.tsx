@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -13,6 +13,7 @@ import { PUBLIC_ENTRY_COLUMNS } from "@/lib/types";
 
 export function JoinForm({ queueId }: { queueId: string }) {
   const router = useRouter();
+  const errorId = useId();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -66,7 +67,11 @@ export function JoinForm({ queueId }: { queueId: string }) {
   }
 
   return (
-    <form action={onSubmit} className="mt-8 flex flex-col gap-4">
+    <form
+      action={onSubmit}
+      className="mt-8 flex flex-col gap-4"
+      aria-busy={pending}
+    >
       <label className="flex flex-col gap-2">
         <span>Your name</span>
         <input
@@ -76,9 +81,15 @@ export function JoinForm({ queueId }: { queueId: string }) {
           maxLength={40}
           autoComplete="name"
           placeholder="So the desk can call you"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
       </label>
-      {error ? <p className="text-ticket">{error}</p> : null}
+      {error ? (
+        <p id={errorId} className="text-ticket" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button className="btn btn-ticket mt-2" type="submit" disabled={pending}>
         {pending ? "Joining…" : "Join the queue"}
       </button>

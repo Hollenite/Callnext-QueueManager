@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TicketBoard } from "@/components/ticket-board";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PUBLIC_ENTRY_COLUMNS, type PublicEntry, type Queue } from "@/lib/types";
+
+export const metadata: Metadata = {
+  title: "Your ticket",
+};
 
 export default async function LiveTicketPage({
   params,
@@ -29,7 +34,10 @@ export default async function LiveTicketPage({
     .order("joined_at", { ascending: true });
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 py-10">
+    <main
+      id="main"
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 py-10"
+    >
       <TicketBoard
         initialQueue={queue as Queue}
         initialEntries={(entries ?? []) as PublicEntry[]}

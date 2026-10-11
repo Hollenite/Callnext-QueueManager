@@ -1,9 +1,28 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { QueueBoard } from "@/components/queue-board";
+import { SiteHeader } from "@/components/site-header";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PUBLIC_ENTRY_COLUMNS, type PublicEntry, type Queue } from "@/lib/types";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  if (!isSupabaseConfigured()) return { title: "Front desk" };
+
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: queue } = await supabase
+    .from("queues")
+    .select("name")
+    .eq("id", id)
+    .maybeSingle();
+
+  return { title: (queue as { name?: string } | null)?.name ?? "Front desk" };
+}
 
 export default async function QueueDashboardPage({
   params,
@@ -38,14 +57,14 @@ export default async function QueueDashboardPage({
     .order("joined_at", { ascending: true });
 
   return (
-    <main className="mx-auto w-full max-w-lg px-6 py-8">
-      <Link href="/dashboard" className="text-slate">
-        All queues
-      </Link>
-      <QueueBoard
-        initialQueue={queue as Queue}
-        initialEntries={(entries ?? []) as PublicEntry[]}
-      />
-    </main>
+    <>
+      <SiteHeader signedIn className="max-w-4xl" />
+      <main id="main" className="mx-auto w-full max-w-4xl px-6 pb-16">
+        <QueueBoard
+          initialQueue={queue as Queue}
+          initialEntries={(entries ?? []) as PublicEntry[]}
+        />
+      </main>
+    </>
   );
 }

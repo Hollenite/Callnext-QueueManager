@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const router = useRouter();
+  const errorId = useId();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -38,7 +39,7 @@ export function LoginForm() {
   }
 
   return (
-    <form action={onSubmit} className="mt-8 flex flex-col gap-4">
+    <form action={onSubmit} className="mt-8 flex flex-col gap-4" aria-busy={pending}>
       <label className="flex flex-col gap-2">
         <span>Email</span>
         <input
@@ -47,6 +48,8 @@ export function LoginForm() {
           name="email"
           autoComplete="email"
           required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
       </label>
       <label className="flex flex-col gap-2">
@@ -58,9 +61,15 @@ export function LoginForm() {
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           minLength={6}
           required
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         />
       </label>
-      {error ? <p className="text-ticket">{error}</p> : null}
+      {error ? (
+        <p id={errorId} className="text-ticket" role="alert">
+          {error}
+        </p>
+      ) : null}
       <button className="btn btn-primary mt-2" type="submit" disabled={pending}>
         {pending
           ? "Working…"
