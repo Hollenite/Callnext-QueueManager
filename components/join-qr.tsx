@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { toast } from "@/components/toaster";
 
+const QR_SIZE = 280;
+
 export function JoinQr({ queueId }: { queueId: string }) {
   const [qr, setQr] = useState<{ link: string; src: string } | null>(null);
 
@@ -12,7 +14,7 @@ export function JoinQr({ queueId }: { queueId: string }) {
     const url = `${window.location.origin}/q/${queueId}`;
     let cancelled = false;
     void QRCode.toDataURL(url, {
-      width: 220,
+      width: QR_SIZE,
       margin: 1,
       color: { dark: "#12263A", light: "#FFFFFF" },
     }).then((src) => {
@@ -40,12 +42,12 @@ export function JoinQr({ queueId }: { queueId: string }) {
         <img
           src={qr.src}
           alt="Join queue QR code"
-          width={220}
-          height={220}
-          className="h-auto w-full max-w-[220px]"
+          width={QR_SIZE}
+          height={QR_SIZE}
+          className="h-auto w-full max-w-[280px]"
         />
       ) : (
-        <div className="aspect-square w-full max-w-[220px] bg-paper" />
+        <div className="aspect-square w-full max-w-[280px] bg-paper" />
       )}
       <p className="mt-3 break-all text-sm text-slate">{qr?.link}</p>
       <button className="btn btn-ghost mt-3 w-full" type="button" onClick={() => void copy()}>

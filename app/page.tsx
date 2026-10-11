@@ -24,14 +24,17 @@ export default function HomePage() {
           <li>Type the name they should call.</li>
           <li>Watch your place update live.</li>
         </ol>
-        <div className="mt-10 flex flex-col gap-4">
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <Link href="/login" className="btn btn-primary w-full sm:w-auto">
             Owner login
           </Link>
-          <p className="text-slate">
-            Already have a join link? Open it on your phone.
-          </p>
+          <Link href="/scan" className="btn btn-ticket w-full sm:w-auto">
+            Scan QR
+          </Link>
         </div>
+        <p className="mt-4 text-slate">
+          Point this phone at the desk QR.
+        </p>
       </main>
     </>
   );

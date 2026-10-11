@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOutAction } from "@/app/dashboard/actions";
 import { cn } from "@/lib/cn";
+import { deskShell } from "@/lib/desk";
 
 type Props = {
   signedIn?: boolean;
@@ -30,7 +31,8 @@ export function SiteHeader({ signedIn = false, className }: Props) {
   return (
     <header
       className={cn(
-        "mx-auto flex w-full max-w-3xl flex-wrap items-center justify-between gap-2 px-6 py-5",
+        "flex flex-wrap items-center justify-between gap-2 py-5",
+        signedIn ? deskShell : "mx-auto w-full max-w-3xl px-6",
         className,
       )}
     >

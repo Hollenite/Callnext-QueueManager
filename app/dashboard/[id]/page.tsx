@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { QueueBoard } from "@/components/queue-board";
 import { SiteHeader } from "@/components/site-header";
+import { deskShell } from "@/lib/desk";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { PUBLIC_ENTRY_COLUMNS, type PublicEntry, type Queue } from "@/lib/types";
@@ -58,8 +59,8 @@ export default async function QueueDashboardPage({
 
   return (
     <>
-      <SiteHeader signedIn className="max-w-4xl" />
-      <main id="main" className="mx-auto w-full max-w-4xl px-6 pb-16">
+      <SiteHeader signedIn />
+      <main id="main" className={`${deskShell} pb-10`}>
         <QueueBoard
           initialQueue={queue as Queue}
           initialEntries={(entries ?? []) as PublicEntry[]}

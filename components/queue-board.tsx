@@ -146,7 +146,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
   }
 
   return (
-    <div className="mt-4">
+    <div className="mt-4 flex min-h-[calc(100dvh-6rem)] flex-col">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
         <div>
           <h1 className="text-4xl tracking-tight">{queue.name}</h1>
@@ -168,7 +168,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
         </button>
       </header>
 
-      <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
+      <div className="mt-8 grid flex-1 gap-8 lg:grid-cols-[minmax(16rem,1.2fr)_minmax(0,1fr)_18rem] lg:items-start">
         <div>
           <button
             className="btn btn-primary min-h-16 w-full text-xl"
@@ -185,16 +185,10 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
             </p>
           ) : null}
 
-          {serving.length === 0 && waiting.length === 0 ? (
-            <p className="mt-10 text-lg text-slate">
-              Nobody is waiting. Share the QR.
-            </p>
-          ) : null}
-
           {serving.map((entry) => (
             <section
               key={entry.id}
-              className="mt-10 border-t-2 border-amber pt-4"
+              className="mt-8 border-t-2 border-amber pt-4"
             >
               <p className="text-amber">Now serving</p>
               <p className="display mt-1 text-3xl">{entry.display_name}</p>
@@ -218,9 +212,15 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
               </div>
             </section>
           ))}
+        </div>
 
-          {waiting.length > 0 ? (
-            <ol className="mt-8">
+        <div>
+          {waiting.length === 0 ? (
+            <p className="text-lg text-slate">
+              Nobody is waiting. Share the QR.
+            </p>
+          ) : (
+            <ol>
               {waiting.map((entry, index) => (
                 <li key={entry.id} className="clipboard-row">
                   <span className="display text-xl text-ticket">{index + 1}</span>
@@ -229,7 +229,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
                 </li>
               ))}
             </ol>
-          ) : null}
+          )}
         </div>
 
         <aside className="qr-stub lg:sticky lg:top-6">
