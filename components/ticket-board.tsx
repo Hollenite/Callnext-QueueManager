@@ -170,7 +170,8 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
       <div className="my-auto">
         <h1 className="text-4xl tracking-tight">No ticket on this phone</h1>
         <p className="mt-4 text-lg text-slate">
-          Join from this device so we can keep your place.
+          Tickets stay on this phone, even if you close the browser. Join from
+          this device — not private browsing — so we can keep your place.
         </p>
         <Link href={`/q/${queue.id}`} className="btn btn-ticket mt-8 w-fit">
           Join the queue
@@ -205,11 +206,18 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
   }
 
   const serving = myStatus === "serving";
+  const nextUp = !serving && position === 1;
+  const live = serving ? "assertive" : "polite";
   const headline = serving
-    ? "You're in"
-    : position === 1
-      ? "You're next"
-      : "Your place";
+    ? "Go to the desk now"
+    : nextUp
+      ? "Get ready"
+      : "Stay put";
+  const instruction = serving
+    ? "They called you."
+    : nextUp
+      ? "You're after the person being seen. Go to the desk when this screen says you're in."
+      : "Keep this screen. Walk up when it says you're next or you're in.";
 
   return (
     <div className="flex min-h-[80dvh] flex-col">
@@ -222,7 +230,7 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           <p
             key={serving ? "now" : String(position ?? "wait")}
             className={cn("ticket-number", serving && "is-now")}
-            aria-live="polite"
+            aria-live={live}
             aria-atomic="true"
           >
             {serving ? "now" : (position ?? "—")}
@@ -230,16 +238,19 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
         </div>
         <h1
           className="mt-8 text-3xl tracking-tight"
-          aria-live="polite"
+          aria-live={live}
           aria-atomic="true"
         >
           {headline}
         </h1>
-        {!serving && waitLabel ? (
+        <p className="mt-3 text-lg text-slate">{instruction}</p>
+        {!serving && waitLabel && !nextUp ? (
           <p className="mt-3 text-xl text-slate">{waitLabel}</p>
         ) : null}
         {!queue.is_open ? (
-          <p className="mt-4 text-ticket">This queue is closed to new joins.</p>
+          <p className="mt-4 text-ticket">
+            This queue is closed to new joins. Your place is kept.
+          </p>
         ) : null}
       </div>
       {error ? (
@@ -248,15 +259,21 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
         </p>
       ) : null}
       {!serving ? (
-        <button
-          className="btn btn-ghost mt-8 w-fit"
-          type="button"
-          disabled={leaving}
-          onClick={() => void leave()}
-        >
-          <LogOut className="size-4" aria-hidden="true" />
-          {leaving ? "Leaving…" : "Leave the queue"}
-        </button>
+        <>
+          <p className="mt-8 text-sm text-slate">
+            This ticket stays on this phone. If you close the page or the
+            browser, scan the same QR or open this link again here.
+          </p>
+          <button
+            className="btn btn-ghost mt-6 w-fit"
+            type="button"
+            disabled={leaving}
+            onClick={() => void leave()}
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            {leaving ? "Leaving…" : "Leave the queue"}
+          </button>
+        </>
       ) : null}
     </div>
   );

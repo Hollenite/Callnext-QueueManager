@@ -3,6 +3,7 @@
 :root {
   --porcelain: #f4f6f8;
   --ink: #12263a;
+  --open: #1f7a4d;
   --ticket: #c81e1e;
   --amber: #e8a317;
   --slate: #5a6b7d;
@@ -14,6 +15,7 @@
 @theme inline {
   --color-porcelain: var(--porcelain);
   --color-ink: var(--ink);
+  --color-open: var(--open);
   --color-ticket: var(--ticket);
   --color-amber: var(--amber);
   --color-slate: var(--slate);
@@ -212,7 +214,7 @@ input:focus-visible,
 }
 
 .queue-status.is-taking {
-  background: var(--ink);
+  background: var(--open);
   color: var(--porcelain);
 }
 

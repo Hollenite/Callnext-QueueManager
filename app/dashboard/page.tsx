@@ -8,6 +8,34 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Queue } from "@/lib/types";
 
+type LiveEntry = {
+  queue_id: string;
+  display_name: string;
+  status: "waiting" | "serving";
+};
+
+type HubLive = {
+  servingNames: string[];
+  waiting: number;
+};
+
+function hubLiveByQueue(entries: LiveEntry[]): Map<string, HubLive> {
+  const byQueue = new Map<string, HubLive>();
+  for (const entry of entries) {
+    const row = byQueue.get(entry.queue_id) ?? {
+      servingNames: [],
+      waiting: 0,
+    };
+    if (entry.status === "serving") {
+      row.servingNames.push(entry.display_name);
+    } else {
+      row.waiting += 1;
+    }
+    byQueue.set(entry.queue_id, row);
+  }
+  return byQueue;
+}
+
 export const metadata: Metadata = {
   title: "Front desk",
 };
@@ -48,6 +76,19 @@ export default async function DashboardPage({
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
+  const list = (queues as Queue[] | null) ?? [];
+  const ids = list.map((queue) => queue.id);
+  const { data: liveEntries } =
+    ids.length === 0
+      ? { data: [] as LiveEntry[] }
+      : await supabase
+          .from("queue_entries")
+          .select("queue_id, display_name, status")
+          .in("queue_id", ids)
+          .in("status", ["waiting", "serving"])
+          .order("joined_at", { ascending: true });
+  const liveByQueue = hubLiveByQueue((liveEntries ?? []) as LiveEntry[]);
+
   if (loadError) {
     return (
       <>
@@ -72,19 +113,42 @@ export default async function DashboardPage({
 
         <div className="mt-10 grid gap-12 lg:grid-cols-2 lg:items-start">
           <section>
-            {(queues as Queue[] | null)?.length ? (
+            {list.length ? (
               <ul>
-                {(queues as Queue[]).map((queue) => (
-                  <li key={queue.id} className="border-b border-line py-4">
-                    <Link
-                      href={`/dashboard/${queue.id}`}
-                      className="flex items-center justify-between gap-4"
-                    >
-                      <span className="text-lg">{queue.name}</span>
-                      <QueueStatus open={queue.is_open} />
-                    </Link>
-                  </li>
-                ))}
+                {list.map((queue) => {
+                  const live = liveByQueue.get(queue.id);
+                  const servingNames = live?.servingNames ?? [];
+                  const waiting = live?.waiting ?? 0;
+                  return (
+                    <li key={queue.id} className="border-b border-line py-4">
+                      <Link
+                        href={`/dashboard/${queue.id}`}
+                        className="flex items-start justify-between gap-4"
+                      >
+                        <span className="min-w-0">
+                          <span className="text-lg">{queue.name}</span>
+                          <span className="mt-1 block text-sm">
+                            {servingNames.length > 0 ? (
+                              <>
+                                <span className="text-amber">Now serving</span>{" "}
+                                {servingNames.join(", ")}
+                              </>
+                            ) : (
+                              <span className="text-slate">
+                                Nobody being seen
+                              </span>
+                            )}
+                            {" · "}
+                            <span className="display text-ticket">{waiting}</span>
+                            {" "}
+                            <span className="text-slate">waiting</span>
+                          </span>
+                        </span>
+                        <QueueStatus open={queue.is_open} />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-lg text-slate">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -9,33 +9,12 @@ import {
   newClientToken,
   saveTicket,
 } from "@/lib/ticket-token";
-import { PUBLIC_ENTRY_COLUMNS } from "@/lib/types";
 
 export function JoinForm({ queueId }: { queueId: string }) {
   const router = useRouter();
   const errorId = useId();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    const ticket = getTicket(queueId);
-    if (!ticket?.entryId) return;
-    let cancelled = false;
-    void (async () => {
-      const { data } = await createClient()
-        .from("queue_entries")
-        .select(PUBLIC_ENTRY_COLUMNS)
-        .eq("id", ticket.entryId)
-        .maybeSingle();
-      if (cancelled) return;
-      if (data && (data.status === "waiting" || data.status === "serving")) {
-        router.replace(`/q/${queueId}/live`);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [queueId, router]);
 
   async function onSubmit(formData: FormData) {
     setError(null);

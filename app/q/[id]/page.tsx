@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JoinForm } from "@/components/join-form";
 import { QueueStatus } from "@/components/queue-status";
+import { ResumeTicket } from "@/components/resume-ticket";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Queue } from "@/lib/types";
@@ -49,6 +50,7 @@ export default async function JoinPage({
       id="main"
       className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12"
     >
+      <ResumeTicket queueId={typed.id} />
       <p className="text-slate">{typed.name}</p>
       <div className="mt-3">
         <QueueStatus open={typed.is_open} variant="full" />
