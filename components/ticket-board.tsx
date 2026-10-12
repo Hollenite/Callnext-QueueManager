@@ -3,9 +3,10 @@
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { QueueStatus } from "@/components/queue-status";
 import { cn } from "@/lib/cn";
+import { signalCalled } from "@/lib/call-signal";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import { getTicket, saveTicket, type StoredTicket } from "@/lib/ticket-token";
@@ -142,6 +143,22 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQueue.id]);
 
+  const called = useRef(false);
+  useEffect(() => {
+    if (myStatus === "serving") {
+      document.title = "Go to the desk now";
+      if (!called.current) {
+        called.current = true;
+        signalCalled();
+      }
+      return () => {
+        document.title = "Your ticket";
+      };
+    }
+    called.current = false;
+    if (myStatus === "live") document.title = "Your ticket";
+  }, [myStatus]);
+
   async function leave() {
     if (!ticket?.entryId || !ticket.token) return;
     if (!window.confirm("Leave the queue?")) return;
@@ -226,7 +243,7 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
         <QueueStatus open={queue.is_open} />
       </div>
       <div className="mt-10 flex flex-1 flex-col items-start">
-        <div className="ticket-stub w-full">
+        <div className={cn("ticket-stub w-full", serving && "is-called")}>
           <p
             key={serving ? "now" : String(position ?? "wait")}
             className={cn("ticket-number", serving && "is-now")}
@@ -237,13 +254,35 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           </p>
         </div>
         <h1
-          className="mt-8 text-3xl tracking-tight"
+          className={cn(
+            "mt-8 tracking-tight",
+            serving ? "text-4xl text-ticket" : "text-3xl",
+          )}
           aria-live={live}
           aria-atomic="true"
         >
           {headline}
         </h1>
-        <p className="mt-3 text-lg text-slate">{instruction}</p>
+        <p className={cn("mt-3 text-slate", serving ? "text-xl" : "text-lg")}>
+          {instruction}
+        </p>
+        {!serving && ahead !== null ? (
+          <>
+            <div className="place-track" aria-hidden="true">
+              {Array.from({ length: Math.min(ahead, 7) }, (_, index) => (
+                <span key={index} className="place-dot is-ahead" />
+              ))}
+              <span className="place-dot is-you" />
+            </div>
+            <p className="mt-2 text-sm text-slate">
+              {ahead === 0
+                ? "Nobody is ahead of you."
+                : ahead === 1
+                  ? "1 person ahead of you."
+                  : `${ahead} people ahead of you.`}
+            </p>
+          </>
+        ) : null}
         {!serving && waitLabel && !nextUp ? (
           <p className="mt-3 text-xl text-slate">{waitLabel}</p>
         ) : null}

@@ -157,6 +157,45 @@ input:focus-visible,
   font-size: clamp(5rem, 22vw, 9rem);
 }
 
+.ticket-stub.is-called {
+  background: var(--ticket);
+  box-shadow: none;
+}
+
+.ticket-stub.is-called .ticket-number {
+  color: #fff;
+}
+
+.ticket-stub.is-called::before,
+.ticket-stub.is-called::after {
+  background: var(--porcelain);
+}
+
+.place-track {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+}
+
+.place-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.place-dot.is-ahead {
+  background: var(--ticket);
+}
+
+.place-dot.is-you {
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--ink);
+}
+
 .ticket-stub {
   position: relative;
   width: 100%;

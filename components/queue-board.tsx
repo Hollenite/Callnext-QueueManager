@@ -6,9 +6,9 @@ import { QueueStatus } from "@/components/queue-status";
 import { toast } from "@/components/toaster";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
-import { minutesAgo } from "@/lib/time";
+import { minutesAgo, minutesIn } from "@/lib/time";
 import type { PublicEntry, Queue } from "@/lib/types";
-import { PUBLIC_ENTRY_COLUMNS } from "@/lib/types";
+import { OWNER_LIVE_COLUMNS } from "@/lib/types";
 
 type Props = {
   initialQueue: Queue;
@@ -45,7 +45,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
         .maybeSingle(),
       supabase
         .from("queue_entries")
-        .select(PUBLIC_ENTRY_COLUMNS)
+        .select(OWNER_LIVE_COLUMNS)
         .eq("queue_id", initialQueue.id)
         .in("status", ["waiting", "serving"])
         .order("joined_at", { ascending: true }),
@@ -194,6 +194,9 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
             >
               <p className="text-amber">Now serving</p>
               <p className="display mt-1 text-3xl">{entry.display_name}</p>
+              {entry.serving_at ? (
+                <p className="mt-1 text-slate">{minutesIn(entry.serving_at)}</p>
+              ) : null}
               <div className="mt-4 flex gap-3">
                 <button
                   className="btn btn-amber"

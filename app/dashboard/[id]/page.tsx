@@ -5,7 +5,11 @@ import { SiteHeader } from "@/components/site-header";
 import { deskShell } from "@/lib/desk";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { PUBLIC_ENTRY_COLUMNS, type PublicEntry, type Queue } from "@/lib/types";
+import {
+  OWNER_LIVE_COLUMNS,
+  type PublicEntry,
+  type Queue,
+} from "@/lib/types";
 
 export async function generateMetadata({
   params,
@@ -52,7 +56,7 @@ export default async function QueueDashboardPage({
 
   const { data: entries } = await supabase
     .from("queue_entries")
-    .select(PUBLIC_ENTRY_COLUMNS)
+    .select(OWNER_LIVE_COLUMNS)
     .eq("queue_id", id)
     .in("status", ["waiting", "serving"])
     .order("joined_at", { ascending: true });

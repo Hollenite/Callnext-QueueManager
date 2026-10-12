@@ -5,3 +5,11 @@ export function minutesAgo(iso: string, now = Date.now()) {
   if (minutes === 1) return "1 min ago";
   return `${minutes} min ago`;
 }
+
+export function minutesIn(iso: string, now = Date.now()) {
+  const then = new Date(iso).getTime();
+  const minutes = Math.max(0, Math.round((now - then) / 60000));
+  if (minutes < 1) return "just started";
+  if (minutes === 1) return "1 min in";
+  return `${minutes} min in`;
+}

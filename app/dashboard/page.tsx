@@ -6,35 +6,13 @@ import { SiteHeader } from "@/components/site-header";
 import { deskShell } from "@/lib/desk";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  HUB_BUSY_WAITING,
+  hubLiveByQueue,
+  type HubLiveEntry,
+} from "@/lib/hub-live";
+import { minutesIn } from "@/lib/time";
 import type { Queue } from "@/lib/types";
-
-type LiveEntry = {
-  queue_id: string;
-  display_name: string;
-  status: "waiting" | "serving";
-};
-
-type HubLive = {
-  servingNames: string[];
-  waiting: number;
-};
-
-function hubLiveByQueue(entries: LiveEntry[]): Map<string, HubLive> {
-  const byQueue = new Map<string, HubLive>();
-  for (const entry of entries) {
-    const row = byQueue.get(entry.queue_id) ?? {
-      servingNames: [],
-      waiting: 0,
-    };
-    if (entry.status === "serving") {
-      row.servingNames.push(entry.display_name);
-    } else {
-      row.waiting += 1;
-    }
-    byQueue.set(entry.queue_id, row);
-  }
-  return byQueue;
-}
 
 export const metadata: Metadata = {
   title: "Front desk",
@@ -80,14 +58,14 @@ export default async function DashboardPage({
   const ids = list.map((queue) => queue.id);
   const { data: liveEntries } =
     ids.length === 0
-      ? { data: [] as LiveEntry[] }
+      ? { data: [] as HubLiveEntry[] }
       : await supabase
           .from("queue_entries")
-          .select("queue_id, display_name, status")
+          .select("queue_id, display_name, status, serving_at")
           .in("queue_id", ids)
           .in("status", ["waiting", "serving"])
           .order("joined_at", { ascending: true });
-  const liveByQueue = hubLiveByQueue((liveEntries ?? []) as LiveEntry[]);
+  const liveByQueue = hubLiveByQueue((liveEntries ?? []) as HubLiveEntry[]);
 
   if (loadError) {
     return (
@@ -119,6 +97,10 @@ export default async function DashboardPage({
                   const live = liveByQueue.get(queue.id);
                   const servingNames = live?.servingNames ?? [];
                   const waiting = live?.waiting ?? 0;
+                  const busy = waiting >= HUB_BUSY_WAITING;
+                  const inService = live?.servingSince
+                    ? minutesIn(live.servingSince)
+                    : null;
                   return (
                     <li key={queue.id} className="border-b border-line py-4">
                       <Link
@@ -132,6 +114,12 @@ export default async function DashboardPage({
                               <>
                                 <span className="text-amber">Now serving</span>{" "}
                                 {servingNames.join(", ")}
+                                {inService ? (
+                                  <>
+                                    {" · "}
+                                    <span className="text-slate">{inService}</span>
+                                  </>
+                                ) : null}
                               </>
                             ) : (
                               <span className="text-slate">
@@ -142,6 +130,12 @@ export default async function DashboardPage({
                             <span className="display text-ticket">{waiting}</span>
                             {" "}
                             <span className="text-slate">waiting</span>
+                            {busy ? (
+                              <>
+                                {" · "}
+                                <span className="text-ticket">Busy</span>
+                              </>
+                            ) : null}
                           </span>
                         </span>
                         <QueueStatus open={queue.is_open} />

@@ -22,7 +22,9 @@ export type QueueEntry = {
 export type PublicEntry = Pick<
   QueueEntry,
   "id" | "queue_id" | "display_name" | "status" | "joined_at"
->;
+> & {
+  serving_at?: string | null;
+};
 
 export type WaitEstimate = {
   people_ahead: number;
@@ -32,3 +34,6 @@ export type WaitEstimate = {
 
 export const PUBLIC_ENTRY_COLUMNS =
   "id, queue_id, display_name, status, joined_at" as const;
+
+export const OWNER_LIVE_COLUMNS =
+  "id, queue_id, display_name, status, joined_at, serving_at" as const;
