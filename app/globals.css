@@ -135,7 +135,7 @@ input:focus-visible,
 .ticket-number {
   font-family: Syne, sans-serif;
   font-weight: 800;
-  font-size: clamp(6.5rem, 28vw, 12rem);
+  font-size: clamp(4.5rem, 28cqi, 8.5rem);
   line-height: 0.85;
   letter-spacing: -0.06em;
   color: var(--ticket);
@@ -154,7 +154,11 @@ input:focus-visible,
 
 .ticket-number.is-now {
   color: var(--amber);
-  font-size: clamp(5rem, 22vw, 9rem);
+  font-size: clamp(4rem, 24cqi, 7.5rem);
+}
+
+.ticket-number.is-finding {
+  animation: ticket-tick 1.1s var(--ease-out) infinite;
 }
 
 .ticket-stub.is-called {
@@ -198,14 +202,60 @@ input:focus-visible,
 
 .ticket-stub {
   position: relative;
+  container-type: inline-size;
   width: 100%;
   background: var(--paper);
   padding: 1.75rem 1.25rem 1.5rem;
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
+.ticket-stub-hero {
+  aspect-ratio: 5 / 3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 1.1rem;
+}
+
+.ticket-stub-hero:has(.is-finding) {
+  align-items: center;
+  padding-top: 1.75rem;
+}
+
+.ticket-stub-hero .ticket-number {
+  margin-bottom: 0;
+}
+
+.ticket-stub-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--ticket);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 400ms var(--ease-out);
+  pointer-events: none;
+}
+
+.ticket-stub-wait {
+  position: absolute;
+  right: 0;
+  bottom: 0.7rem;
+  left: 0;
+  z-index: 1;
+  margin: 0;
+  font-size: 1.05rem;
+  text-align: center;
+  color: #fff;
+}
+
+.ticket-stub.is-inking .ticket-number {
+  color: #fff;
+}
+
 .ticket-stub .ticket-number {
-  font-size: clamp(5.5rem, 22vw, 9rem);
+  position: relative;
+  z-index: 1;
 }
 
 .ticket-stub::before,
@@ -352,6 +402,7 @@ input:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .ticket-number,
+  .ticket-stub-fill,
   .skip-link,
   .scan-reticle,
   [data-sonner-toaster],

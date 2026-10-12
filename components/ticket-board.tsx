@@ -179,7 +179,16 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
   }
 
   if (myStatus === "loading") {
-    return <p className="text-slate">Finding your ticket…</p>;
+    return (
+      <div className="my-auto w-full">
+        <div className="ticket-stub ticket-stub-hero mx-auto w-full max-w-md">
+          <p className="ticket-number is-finding select-none" aria-hidden="true">
+            —
+          </p>
+        </div>
+        <p className="mt-6 text-lg text-slate">Finding your ticket…</p>
+      </div>
+    );
   }
 
   if (myStatus === "missing") {
@@ -225,6 +234,13 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
   const serving = myStatus === "serving";
   const nextUp = !serving && position === 1;
   const live = serving ? "assertive" : "polite";
+  const fill =
+    serving || ahead === null
+      ? 0
+      : nextUp
+        ? 0.88
+        : Math.max(0.28, Math.min(0.75, 1 / (ahead + 1)));
+  const overInk = !serving && fill >= 0.55;
   const headline = serving
     ? "Go to the desk now"
     : nextUp
@@ -243,7 +259,20 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
         <QueueStatus open={queue.is_open} />
       </div>
       <div className="mt-10 flex flex-1 flex-col items-start">
-        <div className={cn("ticket-stub w-full", serving && "is-called")}>
+        <div
+          className={cn(
+            "ticket-stub ticket-stub-hero w-full",
+            serving && "is-called",
+            overInk && "is-inking",
+          )}
+        >
+          {!serving && ahead !== null ? (
+            <div
+              className="ticket-stub-fill"
+              style={{ transform: `scaleY(${fill})` }}
+              aria-hidden="true"
+            />
+          ) : null}
           <p
             key={serving ? "now" : String(position ?? "wait")}
             className={cn("ticket-number", serving && "is-now")}
@@ -252,6 +281,9 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           >
             {serving ? "now" : (position ?? "—")}
           </p>
+          {!serving && waitLabel ? (
+            <p className="ticket-stub-wait">{waitLabel}</p>
+          ) : null}
         </div>
         <h1
           className={cn(
@@ -282,9 +314,6 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
                   : `${ahead} people ahead of you.`}
             </p>
           </>
-        ) : null}
-        {!serving && waitLabel && !nextUp ? (
-          <p className="mt-3 text-xl text-slate">{waitLabel}</p>
         ) : null}
         {!queue.is_open ? (
           <p className="mt-4 text-ticket">

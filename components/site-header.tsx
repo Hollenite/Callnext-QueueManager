@@ -32,7 +32,7 @@ export function SiteHeader({ signedIn = false, className }: Props) {
     <header
       className={cn(
         "flex flex-wrap items-center justify-between gap-2 py-5",
-        signedIn ? deskShell : "mx-auto w-full max-w-3xl px-6",
+        deskShell,
         className,
       )}
     >
