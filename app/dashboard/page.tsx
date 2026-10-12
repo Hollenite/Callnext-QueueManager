@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createQueueAction } from "./actions";
+import { QueueStatus } from "@/components/queue-status";
 import { SiteHeader } from "@/components/site-header";
 import { deskShell } from "@/lib/desk";
 import { createClient } from "@/lib/supabase/server";
@@ -77,12 +78,10 @@ export default async function DashboardPage({
                   <li key={queue.id} className="border-b border-line py-4">
                     <Link
                       href={`/dashboard/${queue.id}`}
-                      className="flex items-baseline justify-between gap-4"
+                      className="flex items-center justify-between gap-4"
                     >
                       <span className="text-lg">{queue.name}</span>
-                      <span className="text-slate">
-                        {queue.is_open ? "Open" : "Closed"}
-                      </span>
+                      <QueueStatus open={queue.is_open} />
                     </Link>
                   </li>
                 ))}

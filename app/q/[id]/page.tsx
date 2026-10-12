@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JoinForm } from "@/components/join-form";
+import { QueueStatus } from "@/components/queue-status";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { Queue } from "@/lib/types";
@@ -49,13 +50,21 @@ export default async function JoinPage({
       className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-6 py-12"
     >
       <p className="text-slate">{typed.name}</p>
-      <h1 className="mt-2 text-4xl tracking-tight">Join the queue</h1>
+      <div className="mt-3">
+        <QueueStatus open={typed.is_open} variant="full" />
+      </div>
       {typed.is_open ? (
-        <JoinForm queueId={typed.id} />
+        <>
+          <h1 className="mt-6 text-4xl tracking-tight">Join the queue</h1>
+          <JoinForm queueId={typed.id} />
+        </>
       ) : (
-        <p className="mt-6 text-lg text-slate">
-          This queue is closed. Ask the desk if they are taking names.
-        </p>
+        <>
+          <h1 className="mt-6 text-4xl tracking-tight">This queue is closed</h1>
+          <p className="mt-4 text-lg text-slate">
+            Ask the desk if they are taking names.
+          </p>
+        </>
       )}
     </main>
   );

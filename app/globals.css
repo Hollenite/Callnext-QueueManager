@@ -193,6 +193,42 @@ input:focus-visible,
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
+.queue-status {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  font-family: Syne, sans-serif;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.queue-status.is-full {
+  min-height: 2.75rem;
+  padding: 0.45rem 0.85rem;
+}
+
+.queue-status.is-taking {
+  background: var(--ink);
+  color: var(--porcelain);
+}
+
+.queue-status.is-shut {
+  background: var(--ticket);
+  color: #fff;
+}
+
+.queue-status-detail {
+  margin-top: 0.15rem;
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 .scan-frame {
   position: relative;
   overflow: hidden;

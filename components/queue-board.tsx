@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { JoinQr } from "@/components/join-qr";
+import { QueueStatus } from "@/components/queue-status";
 import { toast } from "@/components/toaster";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
@@ -149,22 +150,23 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
     <div className="mt-4 flex min-h-[calc(100dvh-6rem)] flex-col">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
         <div>
-          <h1 className="text-4xl tracking-tight">{queue.name}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-4xl tracking-tight">{queue.name}</h1>
+            <QueueStatus open={queue.is_open} variant="full" />
+          </div>
           <p className="mt-2 text-slate">
-            {queue.is_open ? "Open" : "Closed"}
-            <span aria-hidden="true"> · </span>
             <span className="display text-xl text-ticket">{waiting.length}</span>
             {" "}
             waiting
           </p>
         </div>
         <button
-          className="btn btn-ghost"
+          className={queue.is_open ? "btn btn-ghost" : "btn btn-ticket"}
           type="button"
           onClick={toggleOpen}
           disabled={pending}
         >
-          {queue.is_open ? "Close" : "Open"}
+          {queue.is_open ? "Close queue" : "Open queue"}
         </button>
       </header>
 
@@ -234,6 +236,9 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
 
         <aside className="qr-stub lg:sticky lg:top-6">
           <p className="mb-3 text-sm text-slate">Customers scan this</p>
+          {!queue.is_open ? (
+            <p className="mb-3 text-ticket">Closed to new joins</p>
+          ) : null}
           <JoinQr queueId={queue.id} />
         </aside>
       </div>

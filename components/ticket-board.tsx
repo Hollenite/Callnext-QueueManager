@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { QueueStatus } from "@/components/queue-status";
 import { cn } from "@/lib/cn";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
@@ -187,14 +188,17 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           : "You left the queue.";
     return (
       <div className="my-auto">
-        <p className="text-slate">{queue.name}</p>
-        <h1 className="mt-2 text-4xl tracking-tight">{copy}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-slate">{queue.name}</p>
+          <QueueStatus open={queue.is_open} />
+        </div>
+        <h1 className="mt-4 text-4xl tracking-tight">{copy}</h1>
         {queue.is_open ? (
           <Link href={`/q/${queue.id}`} className="btn btn-ticket mt-8 w-fit">
             Join again
           </Link>
         ) : (
-          <p className="mt-6 text-slate">This queue is closed.</p>
+          <p className="mt-6 text-ticket">This queue is closed.</p>
         )}
       </div>
     );
@@ -209,7 +213,10 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
 
   return (
     <div className="flex min-h-[80dvh] flex-col">
-      <p className="text-slate">{queue.name}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-slate">{queue.name}</p>
+        <QueueStatus open={queue.is_open} />
+      </div>
       <div className="mt-10 flex flex-1 flex-col items-start">
         <div className="ticket-stub w-full">
           <p
@@ -232,7 +239,7 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           <p className="mt-3 text-xl text-slate">{waitLabel}</p>
         ) : null}
         {!queue.is_open ? (
-          <p className="mt-4 text-slate">This queue is closed to new joins.</p>
+          <p className="mt-4 text-ticket">This queue is closed to new joins.</p>
         ) : null}
       </div>
       {error ? (
