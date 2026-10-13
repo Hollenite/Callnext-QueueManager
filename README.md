@@ -46,7 +46,7 @@ See [docs/adr/0001-rpc-only-writes.md](docs/adr/0001-rpc-only-writes.md).
 ## Setup
 
 1. Create a Supabase project. Confirm it is not paused.
-2. In the SQL editor, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql).
+2. In the SQL editor, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`supabase/migrations/0002_desk_ops.sql`](supabase/migrations/0002_desk_ops.sql).
 3. Copy env vars:
 
    ```bash

@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import { QueueBoard } from "@/components/queue-board";
 import { SiteHeader } from "@/components/site-header";
 import { deskShell } from "@/lib/desk";
+import type { DayOutcome } from "@/lib/day-counts";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
   OWNER_LIVE_COLUMNS,
+  OWNER_TODAY_COLUMNS,
   type PublicEntry,
   type Queue,
 } from "@/lib/types";
@@ -54,12 +56,21 @@ export default async function QueueDashboardPage({
 
   if (!queue) notFound();
 
-  const { data: entries } = await supabase
-    .from("queue_entries")
-    .select(OWNER_LIVE_COLUMNS)
-    .eq("queue_id", id)
-    .in("status", ["waiting", "serving"])
-    .order("joined_at", { ascending: true });
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const [{ data: entries }, { data: today }] = await Promise.all([
+    supabase
+      .from("queue_entries")
+      .select(OWNER_LIVE_COLUMNS)
+      .eq("queue_id", id)
+      .in("status", ["waiting", "serving"])
+      .order("joined_at", { ascending: true }),
+    supabase
+      .from("queue_entries")
+      .select(OWNER_TODAY_COLUMNS)
+      .eq("queue_id", id)
+      .in("status", ["done", "no_show", "left"])
+      .gte("finished_at", since),
+  ]);
 
   return (
     <>
@@ -68,6 +79,7 @@ export default async function QueueDashboardPage({
         <QueueBoard
           initialQueue={queue as Queue}
           initialEntries={(entries ?? []) as PublicEntry[]}
+          initialToday={(today ?? []) as DayOutcome[]}
         />
       </main>
     </>

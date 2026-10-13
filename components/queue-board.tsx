@@ -3,25 +3,46 @@
 import { useEffect, useMemo, useState } from "react";
 import { JoinQr } from "@/components/join-qr";
 import { QueueStatus } from "@/components/queue-status";
+import { TodayPhrase } from "@/components/today-phrase";
 import { toast } from "@/components/toaster";
+import type { DayOutcome } from "@/lib/day-counts";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import { minutesAgo, minutesIn } from "@/lib/time";
 import type { PublicEntry, Queue } from "@/lib/types";
-import { OWNER_LIVE_COLUMNS } from "@/lib/types";
+import { OWNER_LIVE_COLUMNS, OWNER_TODAY_COLUMNS } from "@/lib/types";
 
 type Props = {
   initialQueue: Queue;
   initialEntries: PublicEntry[];
+  initialToday: DayOutcome[];
 };
 
-export function QueueBoard({ initialQueue, initialEntries }: Props) {
+type PendingKind =
+  | "call"
+  | "open"
+  | "close"
+  | "done"
+  | "no_show"
+  | "add"
+  | "recall";
+
+type PendingAction = { kind: PendingKind; entryId?: string } | null;
+
+function todaySince() {
+  return new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+}
+
+export function QueueBoard({
+  initialQueue,
+  initialEntries,
+  initialToday,
+}: Props) {
   const [queue, setQueue] = useState(initialQueue);
   const [entries, setEntries] = useState(initialEntries);
+  const [todayRows, setTodayRows] = useState(initialToday);
   const [error, setError] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<
-    "call" | "open" | "close" | "done" | "no_show" | null
-  >(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const pending = pendingAction !== null;
 
   const serving = useMemo(
@@ -36,25 +57,39 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
     [entries],
   );
 
+  function isBusy(kind: PendingKind, entryId?: string) {
+    if (pendingAction?.kind !== kind) return false;
+    if (entryId === undefined) return true;
+    return pendingAction.entryId === entryId;
+  }
+
   async function refresh() {
     const supabase = createClient();
-    const [{ data: nextQueue }, { data: nextEntries }] = await Promise.all([
-      supabase
-        .from("queues")
-        .select(
-          "id, owner_id, name, is_open, default_service_minutes, created_at",
-        )
-        .eq("id", initialQueue.id)
-        .maybeSingle(),
-      supabase
-        .from("queue_entries")
-        .select(OWNER_LIVE_COLUMNS)
-        .eq("queue_id", initialQueue.id)
-        .in("status", ["waiting", "serving"])
-        .order("joined_at", { ascending: true }),
-    ]);
+    const [{ data: nextQueue }, { data: nextEntries }, { data: nextToday }] =
+      await Promise.all([
+        supabase
+          .from("queues")
+          .select(
+            "id, owner_id, name, is_open, default_service_minutes, created_at",
+          )
+          .eq("id", initialQueue.id)
+          .maybeSingle(),
+        supabase
+          .from("queue_entries")
+          .select(OWNER_LIVE_COLUMNS)
+          .eq("queue_id", initialQueue.id)
+          .in("status", ["waiting", "serving"])
+          .order("joined_at", { ascending: true }),
+        supabase
+          .from("queue_entries")
+          .select(OWNER_TODAY_COLUMNS)
+          .eq("queue_id", initialQueue.id)
+          .in("status", ["done", "no_show", "left"])
+          .gte("finished_at", todaySince()),
+      ]);
     if (nextQueue) setQueue(nextQueue as Queue);
     if (nextEntries) setEntries(nextEntries as PublicEntry[]);
+    if (nextToday) setTodayRows(nextToday as DayOutcome[]);
   }
 
   useEffect(() => {
@@ -94,14 +129,14 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
   }, [initialQueue.id]);
 
   function run(
-    action: NonNullable<typeof pendingAction>,
+    action: NonNullable<PendingAction>,
     label: string,
     fn: () => Promise<void>,
     successToast?: string,
   ) {
     setError(null);
     setPendingAction(action);
-    void (async () => {
+    return (async () => {
       try {
         await fn();
         await refresh();
@@ -118,7 +153,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
 
   function callNext() {
     run(
-      "call",
+      { kind: "call" },
       "call next",
       async () => {
         const { data, error: rpcError } = await createClient().rpc("call_next", {
@@ -133,7 +168,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
 
   function finish(entryId: string, outcome: "done" | "no_show") {
     run(
-      outcome,
+      { kind: outcome, entryId },
       outcome,
       async () => {
         const { error: rpcError } = await createClient().rpc("finish_entry", {
@@ -146,14 +181,63 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
     );
   }
 
+  function dismissWaiting(entryId: string) {
+    run(
+      { kind: "no_show", entryId },
+      "no-show",
+      async () => {
+        const { error: rpcError } = await createClient().rpc(
+          "dismiss_waiting",
+          { entry_id: entryId },
+        );
+        if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+      },
+      "No-show",
+    );
+  }
+
+  function putBack(entryId: string) {
+    run(
+      { kind: "recall", entryId },
+      "put back",
+      async () => {
+        const { error: rpcError } = await createClient().rpc("recall_entry", {
+          entry_id: entryId,
+        });
+        if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+      },
+      "Put back",
+    );
+  }
+
   function toggleOpen() {
-    run(queue.is_open ? "close" : "open", "update queue", async () => {
-      const { error: rpcError } = await createClient().rpc("set_queue_open", {
-        queue_id: queue.id,
-        is_open: !queue.is_open,
-      });
-      if (rpcError) throw new Error(rpcErrorMessage(rpcError));
-    });
+    run(
+      { kind: queue.is_open ? "close" : "open" },
+      "update queue",
+      async () => {
+        const { error: rpcError } = await createClient().rpc("set_queue_open", {
+          queue_id: queue.id,
+          is_open: !queue.is_open,
+        });
+        if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+      },
+    );
+  }
+
+  async function addAtDesk(formData: FormData) {
+    const name = String(formData.get("name") ?? "").trim();
+    await run(
+      { kind: "add" },
+      "add",
+      async () => {
+        const { error: rpcError } = await createClient().rpc("desk_join", {
+          queue_id: queue.id,
+          name,
+        });
+        if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+      },
+      "Add",
+    );
   }
 
   return (
@@ -169,17 +253,20 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
             {" "}
             waiting
           </p>
+          <p className="mt-1 text-slate">
+            <TodayPhrase rows={todayRows} />
+          </p>
         </div>
         <button
           className={queue.is_open ? "btn btn-ghost" : "btn btn-ticket"}
           type="button"
           onClick={toggleOpen}
           disabled={pending}
-          aria-busy={pendingAction === "close" || pendingAction === "open"}
+          aria-busy={isBusy("close") || isBusy("open")}
         >
-          {pendingAction === "close"
+          {isBusy("close")
             ? "Closing…"
-            : pendingAction === "open"
+            : isBusy("open")
               ? "Opening…"
               : queue.is_open
                 ? "Close queue"
@@ -194,9 +281,9 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
             type="button"
             onClick={callNext}
             disabled={pending || waiting.length === 0}
-            aria-busy={pendingAction === "call"}
+            aria-busy={isBusy("call")}
           >
-            {pendingAction === "call" ? "Calling next…" : "Call next"}
+            {isBusy("call") ? "Calling next…" : "Call next"}
           </button>
           {error ? (
             <p className="mt-3 text-ticket" role="alert">
@@ -214,24 +301,33 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
               {entry.serving_at ? (
                 <p className="mt-1 text-slate">{minutesIn(entry.serving_at)}</p>
               ) : null}
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   className="btn btn-amber"
                   type="button"
                   disabled={pending}
-                  aria-busy={pendingAction === "done"}
+                  aria-busy={isBusy("done", entry.id)}
                   onClick={() => finish(entry.id, "done")}
                 >
-                  {pendingAction === "done" ? "Done…" : "Done"}
+                  {isBusy("done", entry.id) ? "Done…" : "Done"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
                   disabled={pending}
-                  aria-busy={pendingAction === "no_show"}
+                  aria-busy={isBusy("no_show", entry.id)}
                   onClick={() => finish(entry.id, "no_show")}
                 >
-                  {pendingAction === "no_show" ? "No-show…" : "No-show"}
+                  {isBusy("no_show", entry.id) ? "No-show…" : "No-show"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  disabled={pending}
+                  aria-busy={isBusy("recall", entry.id)}
+                  onClick={() => putBack(entry.id)}
+                >
+                  {isBusy("recall", entry.id) ? "Putting back…" : "Put back"}
                 </button>
               </div>
             </section>
@@ -241,7 +337,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
         <div>
           {waiting.length === 0 ? (
             <p className="text-lg text-slate">
-              Nobody is waiting. Share the QR.
+              Nobody is waiting. Add a name or share the QR.
             </p>
           ) : (
             <ol>
@@ -250,10 +346,41 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
                   <span className="display text-xl text-ticket">{index + 1}</span>
                   <span className="text-lg">{entry.display_name}</span>
                   <span className="text-slate">{minutesAgo(entry.joined_at)}</span>
+                  <button
+                    className="btn btn-quiet min-h-0 px-0"
+                    type="button"
+                    disabled={pending}
+                    aria-busy={isBusy("no_show", entry.id)}
+                    onClick={() => dismissWaiting(entry.id)}
+                  >
+                    {isBusy("no_show", entry.id) ? "No-show…" : "No-show"}
+                  </button>
                 </li>
               ))}
             </ol>
           )}
+          <form action={addAtDesk} className="mt-6 flex flex-col gap-3">
+            <label className="flex flex-col gap-2">
+              <span>Add at the desk</span>
+              <input
+                className="field"
+                name="name"
+                required
+                maxLength={40}
+                autoComplete="off"
+                placeholder="Name"
+                disabled={pending}
+              />
+            </label>
+            <button
+              className="btn btn-ghost w-fit"
+              type="submit"
+              disabled={pending}
+              aria-busy={isBusy("add")}
+            >
+              {isBusy("add") ? "Adding…" : "Add"}
+            </button>
+          </form>
         </div>
 
         <aside className="qr-stub lg:sticky lg:top-6">
@@ -262,6 +389,14 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
             <p className="mb-3 text-ticket">Closed to new joins</p>
           ) : null}
           <JoinQr queueId={queue.id} />
+          <a
+            className="btn btn-quiet mt-3 w-full"
+            href={`/q/${queue.id}/wall`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Waiting room
+          </a>
         </aside>
       </div>
     </div>

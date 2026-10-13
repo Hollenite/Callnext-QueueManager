@@ -37,3 +37,5 @@ export const PUBLIC_ENTRY_COLUMNS =
 
 export const OWNER_LIVE_COLUMNS =
   "id, queue_id, display_name, status, joined_at, serving_at" as const;
+
+export const OWNER_TODAY_COLUMNS = "queue_id, status, finished_at" as const;

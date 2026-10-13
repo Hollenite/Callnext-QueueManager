@@ -7,13 +7,15 @@ import { SiteHeader } from "@/components/site-header";
 import { deskShell } from "@/lib/desk";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { TodayPhrase } from "@/components/today-phrase";
+import type { DayOutcome } from "@/lib/day-counts";
 import {
   HUB_BUSY_WAITING,
   hubLiveByQueue,
   type HubLiveEntry,
 } from "@/lib/hub-live";
 import { minutesIn } from "@/lib/time";
-import type { Queue } from "@/lib/types";
+import { OWNER_TODAY_COLUMNS, type Queue } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Front desk",
@@ -57,16 +59,33 @@ export default async function DashboardPage({
 
   const list = (queues as Queue[] | null) ?? [];
   const ids = list.map((queue) => queue.id);
-  const { data: liveEntries } =
+  const since = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const emptyLive = { data: [] as HubLiveEntry[] };
+  const emptyToday = { data: [] as DayOutcome[] };
+  const [{ data: liveEntries }, { data: todayEntries }] =
     ids.length === 0
-      ? { data: [] as HubLiveEntry[] }
-      : await supabase
-          .from("queue_entries")
-          .select("queue_id, display_name, status, serving_at")
-          .in("queue_id", ids)
-          .in("status", ["waiting", "serving"])
-          .order("joined_at", { ascending: true });
+      ? [emptyLive, emptyToday]
+      : await Promise.all([
+          supabase
+            .from("queue_entries")
+            .select("queue_id, display_name, status, serving_at")
+            .in("queue_id", ids)
+            .in("status", ["waiting", "serving"])
+            .order("joined_at", { ascending: true }),
+          supabase
+            .from("queue_entries")
+            .select(OWNER_TODAY_COLUMNS)
+            .in("queue_id", ids)
+            .in("status", ["done", "no_show", "left"])
+            .gte("finished_at", since),
+        ]);
   const liveByQueue = hubLiveByQueue((liveEntries ?? []) as HubLiveEntry[]);
+  const todayByQueue = new Map<string, DayOutcome[]>();
+  for (const row of (todayEntries ?? []) as DayOutcome[]) {
+    const listForQueue = todayByQueue.get(row.queue_id) ?? [];
+    listForQueue.push(row);
+    todayByQueue.set(row.queue_id, listForQueue);
+  }
 
   if (loadError) {
     return (
@@ -75,8 +94,9 @@ export default async function DashboardPage({
         <main id="main" className={`${deskShell} py-16`}>
           <h1 className="text-4xl">Database is not ready</h1>
           <p className="mt-4 text-lg text-slate">
-            Run <code>supabase/migrations/0001_init.sql</code> in the Supabase SQL
-            editor, then refresh.
+            Run <code>supabase/migrations/0001_init.sql</code> then
+            <code>0002_desk_ops.sql</code> in the Supabase SQL editor, then
+            refresh.
           </p>
         </main>
       </>
@@ -137,6 +157,10 @@ export default async function DashboardPage({
                                 <span className="text-ticket">Busy</span>
                               </>
                             ) : null}
+                            {" · "}
+                            <TodayPhrase
+                              rows={todayByQueue.get(queue.id) ?? []}
+                            />
                           </span>
                         </span>
                         <QueueStatus open={queue.is_open} />
