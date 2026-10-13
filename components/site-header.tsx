@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOutAction } from "@/app/dashboard/actions";
+import { BusySubmit } from "@/components/busy-submit";
 import { cn } from "@/lib/cn";
 import { deskShell } from "@/lib/desk";
 
@@ -46,10 +47,13 @@ export function SiteHeader({ signedIn = false, className }: Props) {
               Queues
             </Link>
             <form action={signOutAction}>
-              <button className="btn btn-quiet" type="submit">
+              <BusySubmit
+                className="btn btn-quiet"
+                idle="Sign out"
+                busy="Signing out…"
+              >
                 <SignOutIcon />
-                Sign out
-              </button>
+              </BusySubmit>
             </form>
           </>
         ) : (

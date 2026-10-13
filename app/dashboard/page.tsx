@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createQueueAction } from "./actions";
+import { BusySubmit } from "@/components/busy-submit";
 import { QueueStatus } from "@/components/queue-status";
 import { SiteHeader } from "@/components/site-header";
 import { deskShell } from "@/lib/desk";
@@ -182,9 +183,11 @@ export default async function DashboardPage({
                   {error}
                 </p>
               ) : null}
-              <button className="btn btn-primary mt-2 w-fit" type="submit">
-                Create queue
-              </button>
+              <BusySubmit
+                className="btn btn-primary mt-2 w-fit"
+                idle="Create queue"
+                busy="Creating…"
+              />
             </form>
           </section>
         </div>

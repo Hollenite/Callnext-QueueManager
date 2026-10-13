@@ -168,8 +168,8 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
       entry_id: ticket.entryId,
       client_token: ticket.token,
     });
-    setLeaving(false);
     if (rpcError) {
+      setLeaving(false);
       setError(rpcErrorMessage(rpcError));
       return;
     }
@@ -286,8 +286,9 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
           ) : null}
         </div>
         <h1
+          key={serving ? "now" : String(position ?? "wait")}
           className={cn(
-            "mt-8 tracking-tight",
+            "ticket-headline mt-8 tracking-tight",
             serving ? "text-4xl text-ticket" : "text-3xl",
           )}
           aria-live={live}
@@ -336,6 +337,7 @@ export function TicketBoard({ initialQueue, initialEntries }: Props) {
             className="btn btn-ghost mt-6 w-fit"
             type="button"
             disabled={leaving}
+            aria-busy={leaving}
             onClick={() => void leave()}
           >
             <LogOut className="size-4" aria-hidden="true" />

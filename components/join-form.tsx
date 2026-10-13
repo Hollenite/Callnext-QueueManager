@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
+import { BusySubmit } from "@/components/busy-submit";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -14,11 +15,9 @@ export function JoinForm({ queueId }: { queueId: string }) {
   const router = useRouter();
   const errorId = useId();
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setError(null);
-    setPending(true);
     const name = String(formData.get("name") ?? "").trim();
     const existing = getTicket(queueId);
     const token = existing?.token ?? newClientToken();
@@ -30,11 +29,9 @@ export function JoinForm({ queueId }: { queueId: string }) {
       client_token: token,
     });
 
-    setPending(false);
-
     if (rpcError) {
       if (rpcError.message.includes("already_in_queue")) {
-        router.replace(`/q/${queueId}/live`);
+        await router.replace(`/q/${queueId}/live`);
         return;
       }
       setError(rpcErrorMessage(rpcError));
@@ -42,15 +39,11 @@ export function JoinForm({ queueId }: { queueId: string }) {
     }
 
     saveTicket(queueId, { token, entryId: data.id as string });
-    router.replace(`/q/${queueId}/live`);
+    await router.replace(`/q/${queueId}/live`);
   }
 
   return (
-    <form
-      action={onSubmit}
-      className="mt-8 flex flex-col gap-4"
-      aria-busy={pending}
-    >
+    <form action={onSubmit} className="mt-8 flex flex-col gap-4">
       <label className="flex flex-col gap-2">
         <span>Your name</span>
         <input
@@ -69,9 +62,11 @@ export function JoinForm({ queueId }: { queueId: string }) {
           {error}
         </p>
       ) : null}
-      <button className="btn btn-ticket mt-2" type="submit" disabled={pending}>
-        {pending ? "Joining…" : "Join the queue"}
-      </button>
+      <BusySubmit
+        className="btn btn-ticket mt-2"
+        idle="Join the queue"
+        busy="Joining…"
+      />
     </form>
   );
 }

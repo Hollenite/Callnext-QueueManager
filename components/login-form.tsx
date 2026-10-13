@@ -1,19 +1,41 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useFormStatus } from "react-dom";
 import { useId, useState } from "react";
+import { BusySubmit } from "@/components/busy-submit";
 import { createClient } from "@/lib/supabase/client";
+
+function ModeSwitch({
+  mode,
+  onToggle,
+}: {
+  mode: "signin" | "signup";
+  onToggle: () => void;
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      className="btn btn-quiet self-start px-0"
+      type="button"
+      disabled={pending}
+      onClick={onToggle}
+    >
+      {mode === "signin"
+        ? "Need an owner account?"
+        : "Already have an account?"}
+    </button>
+  );
+}
 
 export function LoginForm() {
   const router = useRouter();
   const errorId = useId();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setError(null);
-    setPending(true);
     const email = String(formData.get("email") ?? "").trim();
     const password = String(formData.get("password") ?? "");
     const supabase = createClient();
@@ -22,8 +44,6 @@ export function LoginForm() {
       mode === "signin"
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password });
-
-    setPending(false);
 
     if (authError) {
       setError(
@@ -34,12 +54,12 @@ export function LoginForm() {
       return;
     }
 
-    router.push("/dashboard");
+    await router.push("/dashboard");
     router.refresh();
   }
 
   return (
-    <form action={onSubmit} className="mt-8 flex flex-col gap-4" aria-busy={pending}>
+    <form action={onSubmit} className="mt-8 flex flex-col gap-4">
       <label className="flex flex-col gap-2">
         <span>Email</span>
         <input
@@ -70,25 +90,18 @@ export function LoginForm() {
           {error}
         </p>
       ) : null}
-      <button className="btn btn-primary mt-2" type="submit" disabled={pending}>
-        {pending
-          ? "Working…"
-          : mode === "signin"
-            ? "Sign in"
-            : "Create account"}
-      </button>
-      <button
-        className="btn btn-quiet self-start px-0"
-        type="button"
-        onClick={() => {
+      <BusySubmit
+        className="btn btn-primary mt-2"
+        idle={mode === "signin" ? "Sign in" : "Create account"}
+        busy={mode === "signin" ? "Signing in…" : "Creating account…"}
+      />
+      <ModeSwitch
+        mode={mode}
+        onToggle={() => {
           setError(null);
           setMode(mode === "signin" ? "signup" : "signin");
         }}
-      >
-        {mode === "signin"
-          ? "Need an owner account?"
-          : "Already have an account?"}
-      </button>
+      />
     </form>
   );
 }

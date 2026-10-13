@@ -88,9 +88,16 @@ input:focus-visible,
   transform: scale(0.97);
 }
 
-.btn:disabled {
+.btn:disabled:not([aria-busy="true"]) {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.btn[aria-busy="true"] {
+  opacity: 1;
+  cursor: wait;
+  pointer-events: none;
+  animation: ticket-tick 1s var(--ease-out) infinite;
 }
 
 .btn-primary {
@@ -386,6 +393,7 @@ input:focus-visible,
   background: var(--paper) !important;
   border: 1px solid var(--line) !important;
   box-shadow: none !important;
+  animation: ticket-fade 180ms var(--ease-out);
 }
 
 .queue-live-toast {
@@ -399,12 +407,28 @@ input:focus-visible,
   text-align: center;
 }
 
+.ticket-headline {
+  animation: ticket-fade 180ms var(--ease-out);
+}
+
+@keyframes ticket-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .ticket-number,
+  .ticket-headline,
   .ticket-stub-fill,
   .skip-link,
   .scan-reticle,
+  .queue-toast,
+  .queue-live-toast,
   [data-sonner-toaster],
   [data-sonner-toast],
   [data-sonner-toast] * {

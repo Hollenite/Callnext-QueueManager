@@ -19,7 +19,10 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
   const [queue, setQueue] = useState(initialQueue);
   const [entries, setEntries] = useState(initialEntries);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "call" | "open" | "close" | "done" | "no_show" | null
+  >(null);
+  const pending = pendingAction !== null;
 
   const serving = useMemo(
     () => entries.filter((entry) => entry.status === "serving"),
@@ -90,9 +93,14 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQueue.id]);
 
-  function run(label: string, fn: () => Promise<void>, successToast?: string) {
+  function run(
+    action: NonNullable<typeof pendingAction>,
+    label: string,
+    fn: () => Promise<void>,
+    successToast?: string,
+  ) {
     setError(null);
-    setPending(true);
+    setPendingAction(action);
     void (async () => {
       try {
         await fn();
@@ -103,13 +111,14 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
           caught instanceof Error ? caught.message : `Could not ${label}.`,
         );
       } finally {
-        setPending(false);
+        setPendingAction(null);
       }
     })();
   }
 
   function callNext() {
     run(
+      "call",
       "call next",
       async () => {
         const { data, error: rpcError } = await createClient().rpc("call_next", {
@@ -125,6 +134,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
   function finish(entryId: string, outcome: "done" | "no_show") {
     run(
       outcome,
+      outcome,
       async () => {
         const { error: rpcError } = await createClient().rpc("finish_entry", {
           entry_id: entryId,
@@ -137,7 +147,7 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
   }
 
   function toggleOpen() {
-    run("update queue", async () => {
+    run(queue.is_open ? "close" : "open", "update queue", async () => {
       const { error: rpcError } = await createClient().rpc("set_queue_open", {
         queue_id: queue.id,
         is_open: !queue.is_open,
@@ -165,8 +175,15 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
           type="button"
           onClick={toggleOpen}
           disabled={pending}
+          aria-busy={pendingAction === "close" || pendingAction === "open"}
         >
-          {queue.is_open ? "Close queue" : "Open queue"}
+          {pendingAction === "close"
+            ? "Closing…"
+            : pendingAction === "open"
+              ? "Opening…"
+              : queue.is_open
+                ? "Close queue"
+                : "Open queue"}
         </button>
       </header>
 
@@ -177,9 +194,9 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
             type="button"
             onClick={callNext}
             disabled={pending || waiting.length === 0}
-            aria-busy={pending}
+            aria-busy={pendingAction === "call"}
           >
-            Call next
+            {pendingAction === "call" ? "Calling next…" : "Call next"}
           </button>
           {error ? (
             <p className="mt-3 text-ticket" role="alert">
@@ -202,17 +219,19 @@ export function QueueBoard({ initialQueue, initialEntries }: Props) {
                   className="btn btn-amber"
                   type="button"
                   disabled={pending}
+                  aria-busy={pendingAction === "done"}
                   onClick={() => finish(entry.id, "done")}
                 >
-                  Done
+                  {pendingAction === "done" ? "Done…" : "Done"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
                   disabled={pending}
+                  aria-busy={pendingAction === "no_show"}
                   onClick={() => finish(entry.id, "no_show")}
                 >
-                  No-show
+                  {pendingAction === "no_show" ? "No-show…" : "No-show"}
                 </button>
               </div>
             </section>
