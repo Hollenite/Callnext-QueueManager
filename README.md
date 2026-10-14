@@ -2,7 +2,7 @@
 
 A live queue for a clinic or salon. The owner opens a queue, customers join with a name (no phone number), and everyone watches position and wait update in realtime.
 
-**Live:** _add your Vercel URL after deploy_
+**Live:** _https://callnext.space/_
 
 ![Queue landing](public/screenshot.png)
 
