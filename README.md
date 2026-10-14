@@ -8,7 +8,7 @@ A live queue for a clinic or salon. The owner opens a queue, customers join with
 
 ## What it does
 
-1. Owner signs in, creates a queue, and shows a QR / join link.
+1. Owner creates an account (or signs in), creates a queue, and shows a QR / join link.
 2. A customer opens the link, types a name, and sees their place and an “about N min” wait.
 3. The owner hits **Call next**, then **Done** or **No-show**. Customer screens update immediately.
 
@@ -46,7 +46,7 @@ See [docs/adr/0001-rpc-only-writes.md](docs/adr/0001-rpc-only-writes.md).
 ## Setup
 
 1. Create a Supabase project. Confirm it is not paused.
-2. In the SQL editor, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`supabase/migrations/0002_desk_ops.sql`](supabase/migrations/0002_desk_ops.sql).
+2. In the SQL editor, run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), then [`supabase/migrations/0002_desk_ops.sql`](supabase/migrations/0002_desk_ops.sql), then [`supabase/migrations/0003_confirm_owner.sql`](supabase/migrations/0003_confirm_owner.sql).
 3. Copy env vars:
 
    ```bash
@@ -68,7 +68,9 @@ See [docs/adr/0001-rpc-only-writes.md](docs/adr/0001-rpc-only-writes.md).
    npm run seed
    ```
 
-6. Deploy to Vercel. Set the two `NEXT_PUBLIC_*` values. Enable GitHub Actions and set repository variable `APP_URL` to the production origin so the daily keep-alive ping can hit `/api/health`.
+6. In the Supabase dashboard, Authentication → Providers → Email: turn **Confirm email** off so Auth does not send a message on **Create account** (the built-in mailer is 2/hour and team inboxes only). `0003_confirm_owner.sql` still confirms the row so they can sign in even if that toggle is on. Seed still confirms the demo owner.
+
+7. Deploy to Vercel. Set the two `NEXT_PUBLIC_*` values. Enable GitHub Actions and set repository variable `APP_URL` to the production origin so the daily keep-alive ping can hit `/api/health`.
 
 ### Demo owner
 

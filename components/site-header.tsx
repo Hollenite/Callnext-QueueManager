@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { signOutAction } from "@/app/dashboard/actions";
 import { BusySubmit } from "@/components/busy-submit";
+import { QueueMark } from "@/components/queue-mark";
 import { cn } from "@/lib/cn";
 import { deskShell } from "@/lib/desk";
 
 type Props = {
   signedIn?: boolean;
   className?: string;
+  tone?: "app" | "landing";
 };
 
 function SignOutIcon() {
@@ -28,7 +30,11 @@ function SignOutIcon() {
   );
 }
 
-export function SiteHeader({ signedIn = false, className }: Props) {
+export function SiteHeader({
+  signedIn = false,
+  className,
+  tone = "app",
+}: Props) {
   return (
     <header
       className={cn(
@@ -37,7 +43,8 @@ export function SiteHeader({ signedIn = false, className }: Props) {
         className,
       )}
     >
-      <Link href="/" className="display text-xl tracking-tight">
+      <Link href="/" className="display flex items-center gap-2 text-xl tracking-tight">
+        <QueueMark />
         Queue
       </Link>
       <nav className="flex items-center gap-2" aria-label="Site">
@@ -57,9 +64,19 @@ export function SiteHeader({ signedIn = false, className }: Props) {
             </form>
           </>
         ) : (
-          <Link href="/login" className="btn btn-quiet">
-            Owner login
-          </Link>
+          <>
+            <Link
+              href="/login"
+              className={
+                tone === "landing" ? "btn btn-login-pill" : "btn btn-quiet"
+              }
+            >
+              Owner login
+            </Link>
+            <Link href="/signup" className="btn btn-quiet">
+              Create account
+            </Link>
+          </>
         )}
       </nav>
     </header>
