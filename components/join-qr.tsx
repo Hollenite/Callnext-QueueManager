@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy } from "lucide-react";
+import { Copy, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { toast } from "@/components/toaster";
@@ -12,6 +12,17 @@ type Props = {
   queueId: string;
   variant?: "desk" | "wall";
 };
+
+function shortJoinLink(url: string) {
+  try {
+    const parsed = new URL(url);
+    const id = parsed.pathname.split("/").pop() ?? "";
+    const shortId = id.length > 8 ? `${id.slice(0, 8)}…` : id;
+    return `${parsed.host}/q/${shortId}`;
+  } catch {
+    return url;
+  }
+}
 
 export function JoinQr({ queueId, variant = "desk" }: Props) {
   const size = variant === "wall" ? WALL_SIZE : DESK_SIZE;
@@ -63,7 +74,9 @@ export function JoinQr({ queueId, variant = "desk" }: Props) {
         <p className="mt-2 text-sm text-slate">Scan to join</p>
       ) : (
         <>
-          <p className="mt-3 break-all text-sm text-slate">{qr?.link}</p>
+          <p className="join-link" title={qr?.link}>
+            {qr ? shortJoinLink(qr.link) : "…"}
+          </p>
           <button
             className="btn btn-ghost mt-3 w-full"
             type="button"
@@ -72,6 +85,15 @@ export function JoinQr({ queueId, variant = "desk" }: Props) {
             <Copy className="size-4" aria-hidden="true" />
             Copy join link
           </button>
+          <a
+            className="btn btn-ghost mt-2 w-full"
+            href={`/q/${queueId}/wall`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open waiting room
+            <ExternalLink className="size-4" aria-hidden="true" />
+          </a>
         </>
       )}
     </div>

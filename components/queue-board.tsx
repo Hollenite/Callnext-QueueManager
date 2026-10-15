@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { JoinQr } from "@/components/join-qr";
 import { QueueStatus } from "@/components/queue-status";
-import { TodayPhrase } from "@/components/today-phrase";
 import { toast } from "@/components/toaster";
-import type { DayOutcome } from "@/lib/day-counts";
+import { countToday, type DayOutcome } from "@/lib/day-counts";
 import { rpcErrorMessage } from "@/lib/rpc-errors";
 import { createClient } from "@/lib/supabase/client";
 import { minutesAgo, minutesIn } from "@/lib/time";
@@ -56,6 +55,8 @@ export function QueueBoard({
         .sort((a, b) => a.joined_at.localeCompare(b.joined_at)),
     [entries],
   );
+  const todayCounts = useMemo(() => countToday(todayRows), [todayRows]);
+  const current = serving[0] ?? null;
 
   function isBusy(kind: PendingKind, entryId?: string) {
     if (pendingAction?.kind !== kind) return false;
@@ -224,9 +225,11 @@ export function QueueBoard({
     );
   }
 
-  async function addAtDesk(formData: FormData) {
-    const name = String(formData.get("name") ?? "").trim();
-    await run(
+  function addAtDesk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const name = String(new FormData(form).get("name") ?? "").trim();
+    void run(
       { kind: "add" },
       "add",
       async () => {
@@ -235,6 +238,7 @@ export function QueueBoard({
           name,
         });
         if (rpcError) throw new Error(rpcErrorMessage(rpcError));
+        form.reset();
       },
       "Add",
     );
@@ -242,20 +246,30 @@ export function QueueBoard({
 
   return (
     <div className="mt-4 flex min-h-[calc(100dvh-6rem)] flex-col">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
+      <header className="flex flex-wrap items-end justify-between gap-4 pb-5">
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-4xl tracking-tight">{queue.name}</h1>
             <QueueStatus open={queue.is_open} variant="full" />
           </div>
-          <p className="mt-2 text-slate">
-            <span className="display text-xl text-ticket">{waiting.length}</span>
-            {" "}
-            waiting
-          </p>
-          <p className="mt-1 text-slate">
-            <TodayPhrase rows={todayRows} />
-          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="metric-pill is-ticket">
+              <b>{waiting.length}</b> waiting
+            </span>
+            <span className="metric-pill">
+              <b>{todayCounts.seen}</b> seen
+            </span>
+            {todayCounts.noShow > 0 ? (
+              <span className="metric-pill">
+                <b>{todayCounts.noShow}</b> no-show
+              </span>
+            ) : null}
+            {todayCounts.left > 0 ? (
+              <span className="metric-pill">
+                <b>{todayCounts.left}</b> left
+              </span>
+            ) : null}
+          </div>
         </div>
         <button
           className={queue.is_open ? "btn btn-ghost" : "btn btn-ticket"}
@@ -274,7 +288,7 @@ export function QueueBoard({
         </button>
       </header>
 
-      <div className="mt-8 grid flex-1 gap-8 lg:grid-cols-[minmax(16rem,1.2fr)_minmax(0,1fr)_18rem] lg:items-start">
+      <div className="mt-4 grid flex-1 gap-8 lg:grid-cols-[minmax(16rem,1.2fr)_minmax(0,1fr)_18rem] lg:items-start">
         <div>
           <button
             className="btn btn-primary min-h-16 w-full text-xl"
@@ -291,89 +305,68 @@ export function QueueBoard({
             </p>
           ) : null}
 
-          {serving.map((entry) => (
-            <section
-              key={entry.id}
-              className="mt-8 border-t-2 border-amber pt-4"
-            >
-              <p className="text-amber">Now serving</p>
-              <p className="display mt-1 text-3xl">{entry.display_name}</p>
-              {entry.serving_at ? (
-                <p className="mt-1 text-slate">{minutesIn(entry.serving_at)}</p>
-              ) : null}
-              <div className="mt-4 flex flex-wrap gap-3">
+          {current ? (
+            <section className="serving-card mt-4">
+              <div>
+                <p className="kicker">Currently serving</p>
+                <p className="who">{current.display_name}</p>
+                {current.serving_at ? (
+                  <p className="elapsed">{minutesIn(current.serving_at)}</p>
+                ) : null}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   className="btn btn-amber"
                   type="button"
                   disabled={pending}
-                  aria-busy={isBusy("done", entry.id)}
-                  onClick={() => finish(entry.id, "done")}
+                  aria-busy={isBusy("done", current.id)}
+                  onClick={() => finish(current.id, "done")}
                 >
-                  {isBusy("done", entry.id) ? "Done…" : "Done"}
+                  {isBusy("done", current.id) ? "Done…" : "Done"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
                   disabled={pending}
-                  aria-busy={isBusy("no_show", entry.id)}
-                  onClick={() => finish(entry.id, "no_show")}
+                  aria-busy={isBusy("no_show", current.id)}
+                  onClick={() => finish(current.id, "no_show")}
                 >
-                  {isBusy("no_show", entry.id) ? "No-show…" : "No-show"}
+                  {isBusy("no_show", current.id) ? "No-show…" : "No-show"}
                 </button>
                 <button
                   className="btn btn-ghost"
                   type="button"
                   disabled={pending}
-                  aria-busy={isBusy("recall", entry.id)}
-                  onClick={() => putBack(entry.id)}
+                  aria-busy={isBusy("recall", current.id)}
+                  onClick={() => putBack(current.id)}
                 >
-                  {isBusy("recall", entry.id) ? "Putting back…" : "Put back"}
+                  {isBusy("recall", current.id) ? "Putting back…" : "Put back"}
                 </button>
               </div>
             </section>
-          ))}
-        </div>
-
-        <div>
-          {waiting.length === 0 ? (
-            <p className="text-lg text-slate">
-              Nobody is waiting. Add a name or share the QR.
-            </p>
           ) : (
-            <ol>
-              {waiting.map((entry, index) => (
-                <li key={entry.id} className="clipboard-row">
-                  <span className="display text-xl text-ticket">{index + 1}</span>
-                  <span className="text-lg">{entry.display_name}</span>
-                  <span className="text-slate">{minutesAgo(entry.joined_at)}</span>
-                  <button
-                    className="btn btn-quiet min-h-0 px-0"
-                    type="button"
-                    disabled={pending}
-                    aria-busy={isBusy("no_show", entry.id)}
-                    onClick={() => dismissWaiting(entry.id)}
-                  >
-                    {isBusy("no_show", entry.id) ? "No-show…" : "No-show"}
-                  </button>
-                </li>
-              ))}
-            </ol>
+            <section className="serving-card is-empty mt-4" aria-live="polite">
+              <p className="kicker">Currently serving</p>
+              <p>Nobody yet. Call next when someone is waiting.</p>
+            </section>
           )}
-          <form action={addAtDesk} className="mt-6 flex flex-col gap-3">
-            <label className="flex flex-col gap-2">
-              <span>Add at the desk</span>
-              <input
-                className="field"
-                name="name"
-                required
-                maxLength={40}
-                autoComplete="off"
-                placeholder="Name"
-                disabled={pending}
-              />
+
+          <form onSubmit={addAtDesk} className="walk-in mt-4">
+            <label className="sr-only" htmlFor="walk-in-name">
+              Name
             </label>
+            <input
+              id="walk-in-name"
+              className="field"
+              name="name"
+              required
+              maxLength={40}
+              autoComplete="off"
+              placeholder="Name"
+              disabled={pending}
+            />
             <button
-              className="btn btn-ghost w-fit"
+              className="btn btn-ghost"
               type="submit"
               disabled={pending}
               aria-busy={isBusy("add")}
@@ -383,20 +376,47 @@ export function QueueBoard({
           </form>
         </div>
 
+        <div>
+          {waiting.length === 0 ? (
+            <p className="text-lg text-slate">Nobody is waiting.</p>
+          ) : (
+            <ol>
+              {waiting.map((entry, index) => (
+                <li
+                  key={entry.id}
+                  className={index === 0 ? "clipboard-row is-next" : "clipboard-row"}
+                >
+                  <span className="display text-xl text-ticket">{index + 1}</span>
+                  <span className="text-lg">{entry.display_name}</span>
+                  <span className="text-slate">{minutesAgo(entry.joined_at)}</span>
+                  <details className="waiting-menu">
+                    <summary aria-label={`More actions for ${entry.display_name}`}>
+                      ⋯
+                    </summary>
+                    <div className="waiting-popover">
+                      <button
+                        className="btn btn-quiet"
+                        type="button"
+                        disabled={pending}
+                        aria-busy={isBusy("no_show", entry.id)}
+                        onClick={() => dismissWaiting(entry.id)}
+                      >
+                        {isBusy("no_show", entry.id) ? "No-show…" : "No-show"}
+                      </button>
+                    </div>
+                  </details>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
         <aside className="qr-stub lg:sticky lg:top-6">
           <p className="mb-3 text-sm text-slate">Customers scan this</p>
           {!queue.is_open ? (
             <p className="mb-3 text-ticket">Closed to new joins</p>
           ) : null}
           <JoinQr queueId={queue.id} />
-          <a
-            className="btn btn-quiet mt-3 w-full"
-            href={`/q/${queue.id}/wall`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Waiting room
-          </a>
         </aside>
       </div>
     </div>

@@ -87,18 +87,20 @@ export default function HomePage() {
                 <LiveIcon />
               </li>
             </ol>
-            <div className="landing-actions mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link href="/scan" className="btn btn-ticket w-full sm:w-auto">
-                Scan QR
-                <ScanIcon />
-              </Link>
+            <div className="landing-actions mt-9 flex flex-col gap-3 sm:flex-row sm:items-end">
               <Link href="/signup" className="btn btn-primary w-full sm:w-auto">
                 Open a desk
               </Link>
+              <div>
+                <Link href="/scan" className="btn btn-ghost w-full sm:w-auto">
+                  Scan QR
+                  <ScanIcon />
+                </Link>
+                <p className="mt-2 max-w-[18ch] text-sm text-slate">
+                  Already at a desk? Point this phone at the QR.
+                </p>
+              </div>
             </div>
-            <p className="mt-4 text-slate">
-              Point this phone at the desk QR to try it out.
-            </p>
           </div>
         </div>
       </main>
