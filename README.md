@@ -6,7 +6,7 @@ A live desk line for a clinic or salon. The owner runs one queue from a single s
 | --- | --- |
 | **Live** | https://callnext.space/ |
 | **Source** | https://github.com/Hollenite/MERN-endTerm |
-| **Demo video** | _Add public URL here_ |
+| **Demo video** | https://www.youtube.com/watch?v=CLFqAdGS9Ag |
 
 ![Queue landing](public/screenshot.png)
 
@@ -133,7 +133,7 @@ npm test
 
 ## Demo video (~3 minutes)
 
-**URL:** _Add public URL here_
+**URL:** https://www.youtube.com/watch?v=CLFqAdGS9Ag
 
 Two windows side by side. Cover the same workflows as [Try it](#try-it):
 
